@@ -1,0 +1,127 @@
+%% Overall async-first communication architecture (plan + current)
+%% Current: identity-service (3001), core-service (3002), relay, Redis, realtime-gateway (3010), ayncor-e2e, contracts.
+%% Future: API Gateway, Notification, AI, Search, Analytics, workers, external, monitoring — as planned.
+
+graph TB
+    subgraph "Clients"
+        WEB[Web App]
+        DESKTOP[Desktop App]
+        MOBILE[Mobile App]
+    end
+
+    subgraph "Edge (future)"
+        LB[Load Balancer]
+        CDN[CDN optional]
+    end
+
+    subgraph "API Gateway (future)"
+        APIGW[API Gateway<br/>Rate limit, Auth check<br/>Request routing]
+    end
+
+    subgraph "Services"
+        subgraph "identity-service :3001"
+            ID_API[Identity API<br/>Auth, Users, Orgs<br/>Memberships, Roles, Invites<br/>Audit, Health]
+            ID_DB[(PostgreSQL)]
+        end
+
+        subgraph "core-service :3002"
+            CORE_API[Core API<br/>Channels, Threads, Messages<br/>Reactions, Participants<br/>User-state, Inbox, Health]
+            CORE_DB[(PostgreSQL<br/>+ OutboxEvent)]
+        end
+
+        subgraph "realtime-gateway :3010"
+            WS_GW[WebSocket Gateway<br/>JWT auth, subscribe inbox/thread<br/>Stateless fan-out]
+        end
+
+        subgraph "Future services"
+            NOTIF[Notification Service<br/>Digests, urgency routing]
+            AI_SVC[AI Service<br/>Summaries, extraction]
+            SEARCH[Search Service<br/>Full-text, filters]
+            ANALYTICS[Analytics Service<br/>Usage, engagement]
+        end
+    end
+
+    subgraph "Event flow"
+        RELAY[Relay<br/>Polls Outbox → Redis]
+        REDIS[(Redis<br/>realtime:events<br/>Pub/Sub)]
+    end
+
+    subgraph "Future: queue + workers"
+        QUEUE[Message Queue<br/>RabbitMQ / SQS<br/>optional for scale]
+        DIGEST_W[Digest Worker]
+        AI_W[AI Worker]
+        SEARCH_W[Search Indexer]
+        ANALYTICS_W[Analytics Worker]
+    end
+
+    subgraph "Future: external"
+        EMAIL[Email]
+        PUSH[Push]
+        LLM[LLM]
+    end
+
+    subgraph "Future: storage + cache"
+        S3[Object Storage<br/>Attachments, avatars]
+        CACHE[(Redis Cache<br/>Rate limit, session)]
+    end
+
+    subgraph "Monitoring (future)"
+        METRICS[Metrics]
+        LOGS[Logs]
+        TRACING[Tracing]
+    end
+
+    subgraph "Test / contracts"
+        E2E[ayncor-e2e]
+        CONTRACTS[contracts/v1]
+    end
+
+    %% Clients → edge/gateway (future) or direct (current)
+    WEB --> LB
+    DESKTOP --> LB
+    MOBILE --> LB
+    LB --> APIGW
+    APIGW --> ID_API
+    APIGW --> CORE_API
+    WEB -.WebSocket.-> WS_GW
+    DESKTOP -.WebSocket.-> WS_GW
+    MOBILE -.WebSocket.-> WS_GW
+
+    %% Current: identity, core, DBs
+    ID_API --> ID_DB
+    CORE_API --> CORE_DB
+    ID_API -.-> CACHE
+    CORE_API -.-> S3
+
+    %% Event path: Outbox → Relay → Redis → WS (current)
+    CORE_DB -.Outbox.-> RELAY
+    RELAY --> REDIS
+    REDIS --> WS_GW
+
+    %% Future: Redis or Queue → workers → services
+    REDIS -.optional.-> QUEUE
+    QUEUE --> DIGEST_W
+    QUEUE --> AI_W
+    QUEUE --> SEARCH_W
+    QUEUE --> ANALYTICS_W
+    DIGEST_W --> NOTIF
+    DIGEST_W --> EMAIL
+    DIGEST_W --> PUSH
+    AI_W --> AI_SVC
+    AI_W --> LLM
+    SEARCH_W --> SEARCH
+    ANALYTICS_W --> ANALYTICS
+
+    %% E2E + contracts
+    E2E -.-> ID_API
+    E2E -.-> CORE_API
+    E2E -.-> WS_GW
+    ID_API -.-> CONTRACTS
+    CORE_API -.-> CONTRACTS
+    WS_GW -.-> CONTRACTS
+
+    %% Monitoring
+    ID_API -.-> METRICS
+    CORE_API -.-> METRICS
+    WS_GW -.-> LOGS
+    METRICS -.-> TRACING

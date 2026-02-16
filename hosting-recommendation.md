@@ -20,34 +20,40 @@ Three environments: **development**, **staging**, **production**.
 
 ---
 
-## Recommended: **Railway**
+## Recommended: **Render**
 
-**Best fit** for your current stage: multi-service Node stack, Postgres, Redis, WebSockets, three environments, and industry-aligned DX.
+**Best fit** for your current stage: stable PaaS, multi-service Node stack, Postgres, Redis, WebSockets, and three environments. Mature platform with reliable UI and predictable behavior.
 
-### Why Railway
+### Why Render
 
-- **One platform** – Deploy identity, core, realtime-gateway, and relay as services; add Postgres (x2) and Redis from the dashboard. No VMs or Kubernetes to manage.
-- **Managed Postgres and Redis** – Provisioned in a few clicks; connection strings and env vars wired automatically.
-- **WebSockets** – Fully supported; no extra config for realtime-gateway.
-- **Environments** – Use Railway “environments” (e.g. development, staging, production) and attach services per environment. Map GitHub branches (e.g. `development` → dev, `staging` → staging, `main` → production) via GitHub integration or CI/CD.
-- **GitHub integration** – Connect repo(s), optional auto-deploy from branch; or keep using your existing GitHub Actions and deploy via Railway CLI/API.
-- **Pricing** – Usage-based; affordable for small teams; free trial to validate.
-- **Industry practice** – PaaS for speed and reliability; managed DBs; clear path to scale or move to Azure/AWS later if needed.
+- **Stable and predictable** – No flaky "unknown error" UI; create services and databases without random failures. Mature product, good uptime.
+- **One platform** – Web Services for identity, core, realtime-gateway; Background Worker for relay; managed Postgres (x2) and Redis from the dashboard.
+- **Managed Postgres and Redis** – Provision from dashboard; connection strings and env vars (e.g. `DATABASE_URL`, `REDIS_URL`) available to link to services.
+- **WebSockets** – Supported on paid Web Services; no extra config for realtime-gateway.
+- **Environments** – Use separate Render services per environment (e.g. identity-service-dev, identity-service-staging, identity-service-prod). Map GitHub branch per service (e.g. branch `development` → dev service).
+- **GitHub integration** – Connect repo(s), auto-deploy from branch; build and start commands in dashboard; env vars (including `NPM_TOKEN` for private npm) work as expected.
+- **Pricing** – Free tier for trying; paid tiers straightforward. No surprise "apply changes" failures.
 
 ### How it maps
 
-- **identity-service** → Railway Web Service (Node, build: `npm ci && prisma generate && npm run build`, start: `npm start`).
-- **core-service** → Railway Web Service (same pattern).
-- **realtime-gateway** → Railway Web Service (Node, WebSockets supported).
-- **relay** → Railway Background Worker or separate service (long-running process; same repo as core or separate).
-- **PostgreSQL** → Two Railway Postgres plugins (one for identity, one for core), or one Postgres with two databases.
-- **Redis** → Railway Redis plugin; same instance can serve realtime-gateway and relay.
+- **identity-service** → Render Web Service (Node; build/start: see [render-setup.md](render-setup.md); run migrations in start: `npx prisma migrate deploy && npm start`).
+- **core-service** → Render Web Service (same pattern).
+- **realtime-gateway** → Render Web Service (Node, WebSockets on paid).
+- **relay** → Render Background Worker (same repo as core-service; start: `node dist/relay/main.js`).
+- **PostgreSQL** → Two Render Postgres instances (identity-db, core-db); link via `DATABASE_URL`.
+- **Redis** → One Render Redis; link via `REDIS_URL` to core-service, realtime-gateway, relay.
 
-Use **Railway environments** for development / staging / production and attach the same service layout to each.
+See **[render-setup.md](render-setup.md)** for step-by-step setup per environment.
 
 ---
 
-## Alternative 1: **Azure** (enterprise / Microsoft stack)
+## Alternative 1: **Railway**
+
+Same topology (services + Postgres x2 + Redis, environments). Can work when the platform is stable; some users hit "unknown error" when creating services or adding envs. Prefer Render for reliability.
+
+---
+
+## Alternative 2: **Azure** (enterprise / Microsoft stack)
 
 Use this if you need enterprise compliance, existing Azure/Microsoft investment, or want to keep the Azure-focused GitHub Actions you already have.
 
@@ -55,19 +61,7 @@ Use this if you need enterprise compliance, existing Azure/Microsoft investment,
 - **Data:** Azure Database for PostgreSQL (Flexible Server) – one server, two databases, or two servers; Azure Cache for Redis.
 - **Environments:** Separate App Service plans or resource groups for dev/staging/prod.
 - **Pros:** Enterprise-ready, SLA, VNet, GitHub Actions `azure/webapps-deploy` already in place.
-- **Cons:** More configuration and cost than Railway for a small team.
-
----
-
-## Alternative 2: **Render**
-
-Good middle ground: simple PaaS, managed Postgres and Redis, GitHub auto-deploy.
-
-- **Compute:** Web Services for identity, core, realtime-gateway; Background Worker for relay.
-- **Data:** Render Postgres (x2) and Redis.
-- **Environments:** Separate services per environment or use Render “environments” where available.
-- **Pros:** Simple, good free tier for trying, WebSockets on paid tiers.
-- **Cons:** Cold starts on free tier; less flexible than Railway for fine-grained env mapping.
+- **Cons:** More configuration and cost than Render for a small team.
 
 ---
 
@@ -84,22 +78,22 @@ Use when you need maximum scale, existing AWS footprint, or specific AWS service
 
 ## Summary table
 
-| Criteria           | Railway     | Azure        | Render    | AWS        |
-|--------------------|------------|-------------|-----------|------------|
-| Setup simplicity   | ★★★★★      | ★★★         | ★★★★      | ★★         |
-| Postgres + Redis   | Built-in   | Built-in    | Built-in  | RDS + ElastiCache |
-| WebSockets         | Yes        | Yes         | Yes (paid)| Yes        |
-| 3 envs (dev/stg/pr)| Environments | Resource groups | Services | Accounts/VPCs |
-| Cost (early stage) | Low        | Medium      | Low       | Medium     |
-| Enterprise / compliance | Good   | Strong      | Good      | Strong     |
-| GitHub / CI        | CLI + API  | Actions ✅  | Auto-deploy | Actions   |
+| Criteria           | Render     | Railway     | Azure        | AWS        |
+|--------------------|------------|------------|-------------|------------|
+| Setup simplicity   | ★★★★      | ★★★★★*     | ★★★         | ★★         |
+| Reliability / UI   | Stable     | Variable   | Stable      | Stable     |
+| Postgres + Redis   | Built-in   | Built-in   | Built-in    | RDS + ElastiCache |
+| WebSockets         | Yes (paid) | Yes        | Yes         | Yes        |
+| 3 envs (dev/stg/pr)| Services   | Environments | Resource groups | Accounts/VPCs |
+| Cost (early stage) | Low        | Low        | Medium      | Medium     |
+| GitHub / CI        | Auto-deploy| CLI + API  | Actions ✅  | Actions    |
+
+*Railway can be simple when it works; some users hit creation/UI errors.
 
 ---
 
 ## Recommendation
 
-- **Start with Railway** for the whole stack: one place for all services, Postgres, and Redis; clear dev/staging/production; good fit for async-first Node + WebSockets + relay.
-- **Keep or adjust CI/CD:** Either use Railway’s GitHub integration for deploys, or keep GitHub Actions and add a “deploy to Railway” step (Railway CLI or API) instead of (or in addition to) Azure deploy.
-- **Move to Azure (or AWS) later** if you need enterprise compliance, stricter networking, or existing cloud contracts; the three-branch flow and app design stay the same.
-
-If you tell me which platform you prefer (Railway, Azure, or Render), I can outline concrete steps and, for identity-service, suggest exact workflow changes (e.g. swap Azure deploy for Railway deploy).
+- **Use Render** for the whole stack: stable UI, one place for all services, Postgres (x2), and Redis; clear path for dev/staging/production. Step-by-step: **[render-setup.md](render-setup.md)**.
+- **Keep CI in GitHub Actions** (build + test); let Render auto-deploy from branch, or trigger via Render API/CLI after CI passes.
+- **Move to Azure or AWS** later if you need enterprise compliance or existing cloud contracts; app design and three-branch flow stay the same.

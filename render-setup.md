@@ -28,7 +28,7 @@ Step-by-step guide to run **identity-service**, **core-service**, **realtime-gat
 
 ## 3. Environments: one set of services per environment
 
-Render does not have “environments” like Railway. You get **one set of services per environment** by creating separate services with clear names:
+Render does not have built-in environments. You get **one set of services per environment** by creating separate services with clear names:
 
 - **Development:** identity-service-dev, core-service-dev, realtime-gateway-dev, relay-dev, identity-db-dev, core-db-dev, redis-dev
 - **Staging:** identity-service-staging, core-service-staging, etc.

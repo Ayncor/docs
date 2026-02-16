@@ -5,6 +5,6 @@ Short reference for the ayncor platform.
 | Doc | Description |
 |-----|-------------|
 | [CI-CD.md](./CI-CD.md) | Branch strategy (development → staging → main), GitHub Actions, deployment (identity-service Azure), E2E, NPM_TOKEN. |
-| [hosting-recommendation.md](./hosting-recommendation.md) | Hosting options: Railway (recommended), Azure, Render, AWS; what to run where. |
-| [railway-setup.md](./railway-setup.md) | Step-by-step Railway setup: project, envs, Postgres, Redis, deploy identity, core, realtime-gateway, relay. |
+| [hosting-recommendation.md](./hosting-recommendation.md) | Hosting options: Render (recommended), Azure, AWS; what to run where. |
+| [render-setup.md](./render-setup.md) | Step-by-step Render setup: Postgres (x2), Redis, deploy identity-service, core-service, realtime-gateway, relay per environment. |
 | [async_comm_architecture.mermaid](./async_comm_architecture.mermaid) | Architecture diagram (identity, core, realtime-gateway, relay, Redis, future services). |

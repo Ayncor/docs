@@ -101,7 +101,7 @@ Deploy steps are set to `continue-on-error: true` until you add the secrets; the
 4. **App settings in Azure:** for each app, set `DATABASE_URL`, `JWT_ACCESS_SECRET`, `BOOTSTRAP_EMAIL`, `BOOTSTRAP_PASSWORD`, `BOOTSTRAP_ORG_SLUG` (and any others from `.env.example`) in **Configuration → Application settings**. Run Prisma migrations (e.g. once per app or from a release step).
 5. When everything is configured, in the workflow set `continue-on-error: false` for the deploy steps.
 
-**Other platforms (Railway, Render, Fly.io, etc.):** replace the `azure/webapps-deploy` step with that platform’s action or CLI; the rest of the job (build, prune, package) can stay.
+**Other platforms (Render, Fly.io, etc.):** replace the `azure/webapps-deploy` step with that platform’s action or CLI; the rest of the job (build, prune, package) can stay.
 
 ### 4. E2E against staging
 

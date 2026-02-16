@@ -47,13 +47,7 @@ See **[render-setup.md](render-setup.md)** for step-by-step setup per environmen
 
 ---
 
-## Alternative 1: **Railway**
-
-Same topology (services + Postgres x2 + Redis, environments). Can work when the platform is stable; some users hit "unknown error" when creating services or adding envs. Prefer Render for reliability.
-
----
-
-## Alternative 2: **Azure** (enterprise / Microsoft stack)
+## Alternative 1: **Azure** (enterprise / Microsoft stack)
 
 Use this if you need enterprise compliance, existing Azure/Microsoft investment, or want to keep the Azure-focused GitHub Actions you already have.
 
@@ -65,7 +59,7 @@ Use this if you need enterprise compliance, existing Azure/Microsoft investment,
 
 ---
 
-## Alternative 3: **AWS**
+## Alternative 2: **AWS**
 
 Use when you need maximum scale, existing AWS footprint, or specific AWS services.
 
@@ -78,17 +72,15 @@ Use when you need maximum scale, existing AWS footprint, or specific AWS service
 
 ## Summary table
 
-| Criteria           | Render     | Railway     | Azure        | AWS        |
-|--------------------|------------|------------|-------------|------------|
-| Setup simplicity   | ★★★★      | ★★★★★*     | ★★★         | ★★         |
-| Reliability / UI   | Stable     | Variable   | Stable      | Stable     |
-| Postgres + Redis   | Built-in   | Built-in   | Built-in    | RDS + ElastiCache |
-| WebSockets         | Yes (paid) | Yes        | Yes         | Yes        |
-| 3 envs (dev/stg/pr)| Services   | Environments | Resource groups | Accounts/VPCs |
-| Cost (early stage) | Low        | Low        | Medium      | Medium     |
-| GitHub / CI        | Auto-deploy| CLI + API  | Actions ✅  | Actions    |
-
-*Railway can be simple when it works; some users hit creation/UI errors.
+| Criteria           | Render     | Azure        | AWS        |
+|--------------------|------------|-------------|------------|
+| Setup simplicity   | ★★★★      | ★★★         | ★★         |
+| Reliability / UI   | Stable     | Stable      | Stable     |
+| Postgres + Redis   | Built-in   | Built-in    | RDS + ElastiCache |
+| WebSockets         | Yes (paid) | Yes         | Yes        |
+| 3 envs (dev/stg/pr)| Services   | Resource groups | Accounts/VPCs |
+| Cost (early stage) | Low        | Medium      | Medium     |
+| GitHub / CI        | Auto-deploy| Actions ✅  | Actions    |
 
 ---
 

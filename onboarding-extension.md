@@ -130,7 +130,7 @@ Migration: add column `allowedEmailDomains` (or `allowed_email_domains` in DB) a
 ### Step 3: Team members (optional)
 - "Add team members now" or "I'll do this later"
 - If now: list of emails, optional role per invite
-- Submit → `POST /auth/signup` with `invites` array
+- Submit → `POST /orgs/signup` with `invites` array
 
 ### Step 4: Redirect
 - On success: store tokens, redirect to dashboard

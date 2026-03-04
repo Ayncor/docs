@@ -125,7 +125,7 @@ Migration: add column `allowedEmailDomains` (or `allowed_email_domains` in DB) a
 ### Step 2: Team
 - Team name
 - Team URL: `____.ayncor.com` — input is the subdomain (e.g. `acme` → `acme.ayncor.com`)
-- Optional: "Check availability" → `GET /orgs/slug-available?slug=acme`
+- Optional: "Check availability" → `GET /orgs/availability/slug?slug=acme`
 
 ### Step 3: Team members (optional)
 - "Add team members now" or "I'll do this later"
@@ -174,7 +174,7 @@ Validate in sign-up and `POST /orgs`.
 - [x] `PATCH /orgs/{orgId}/settings` — org admin
 - [x] Enforce `allowed_email_domains` in createInvite, createMember
 - [x] Slug blocklist validation
-- [ ] Update OpenAPI contract
+- [x] Update OpenAPI contract
 
 ### Frontend (separate repo / later)
 

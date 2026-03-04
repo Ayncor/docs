@@ -1,10 +1,24 @@
 # Railway setup for ayncor
 
-Step-by-step guide to run **identity-service**, **core-service**, **realtime-gateway**, and **relay** on Railway with **PostgreSQL** (x2) and **Redis**, across **development**, **staging**, and **production**.
+Step-by-step guide to run **identity-service**, **core-service**, **realtime-gateway**, and **relay** on [Railway](https://railway.app) with **PostgreSQL** (x2) and **Redis**, across **development**, **staging**, and **production**.
+
+**All four app components come from three GitHub repos.** identity-service, core-service, and realtime-gateway are one service each; relay is a second service from the **core-service** repo (same repo, different start command).
 
 ---
 
-## 1. Prerequisites
+## 1. Repos and what deploys
+
+| GitHub repo          | Railway service(s)     | Type              |
+|----------------------|------------------------|-------------------|
+| **identity-service** | identity-service       | Web Service       |
+| **core-service**     | core-service, relay    | Web Service, Worker |
+| **realtime-gateway** | realtime-gateway       | Web Service       |
+
+**Data (per environment):** 2× Postgres (identity-db, core-db), 1× Redis. Create these first, then deploy the app services.
+
+---
+
+## 2. Prerequisites
 
 - [Railway](https://railway.app) account (sign up with GitHub).
 - GitHub repos: **identity-service**, **core-service**, **realtime-gateway** (each in its own repo or in a monorepo).
@@ -12,7 +26,7 @@ Step-by-step guide to run **identity-service**, **core-service**, **realtime-gat
 
 ---
 
-## 2. Create project and environments
+## 3. Create project and environments
 
 1. Go to [railway.app](https://railway.app) → **New Project**.
 2. Name the project (e.g. **ayncor**).
@@ -26,7 +40,7 @@ You’ll add the same set of services and data to each environment (or share dat
 
 ---
 
-## 3. Add data (Postgres + Redis)
+## 4. Add data (Postgres + Redis)
 
 In **each** environment (or once and reference from all):
 
@@ -47,69 +61,82 @@ If you use one environment for “dev” first, add these three there; repeat fo
 
 ---
 
-## 4. Deploy identity-service
+## 5. Private npm (@ayncor/contracts)
+
+All Node services install `@ayncor/contracts` from GitHub Packages. Add **NPM_TOKEN** (GitHub PAT with `read:packages`) as a **secret** variable in each service. Use it in the build command:
+
+```
+echo "//npm.pkg.github.com/:_authToken=$NPM_TOKEN" >> .npmrc && npm ci && ...
+```
+
+---
+
+## 6. Deploy identity-service
 
 1. **+ New** → **GitHub Repo** → select **identity-service** repo.
 2. **Environment:** choose **development** (or staging/production).
 3. **Settings** for the new service:
-   - **Name:** `identity-service`.
+   - **Name:** `identity-service` (or `identity-service-dev` for dev env).
    - **Root Directory:** leave empty if repo root is the app; otherwise set (e.g. `identity-service` in a monorepo).
    - **Build Command:**  
-     `npm ci && npx prisma generate && npm run build`
+     `echo "//npm.pkg.github.com/:_authToken=$NPM_TOKEN" >> .npmrc && npm ci && npx prisma generate && npm run build`
    - **Start Command:**  
-     `npm start` (or `node dist/entry.js` if your package.json differs.)
+     `npx prisma migrate deploy && npm start`
    - **Watch Paths:** leave default so pushes to the repo trigger deploys.
 
 4. **Variables** (Settings → **Variables** → **Add** or use **Variables** from Postgres):
+   - **NPM_TOKEN** → GitHub PAT with `read:packages` (secret).
    - **DATABASE_URL** → **Add Reference** → select **identity-db** → `DATABASE_URL`.
    - **PORT** → Railway sets this; optional override (e.g. `3001` for local parity).
    - **JWT_ACCESS_SECRET** → generate a long random value (e.g. 32+ bytes, base64); **same value** in identity, core, and realtime-gateway.
    - **BOOTSTRAP_EMAIL**, **BOOTSTRAP_PASSWORD**, **BOOTSTRAP_ORG_SLUG**, **BOOTSTRAP_ORG_NAME** → from your `.env.example` (e.g. `admin@ayncor.local`, secure password, `ayncor`, `AynCor`).
    - **JWT_ACCESS_TTL_SECONDS**, **JWT_REFRESH_TTL_MS** → optional (defaults are fine).
 
-5. **Deploy:** Railway builds and runs. First run: you need to apply migrations (see §7).
+5. **Deploy:** Railway builds and runs. Migrations run automatically on start.
 
 6. **Custom domain / URL:** Settings → **Networking** → **Generate Domain** (or add your own). Note the URL (e.g. `https://identity-service-xxx.up.railway.app`) for **core-service** and clients.
 
 ---
 
-## 5. Deploy core-service
+## 7. Deploy core-service
 
 1. **+ New** → **GitHub Repo** → select **core-service** repo.
 2. **Environment:** same as identity (e.g. **development**).
 3. **Settings:**
-   - **Name:** `core-service`.
+   - **Name:** `core-service` (or `core-service-dev` for dev env).
    - **Build Command:**  
-     `npm ci && npx prisma generate && npm run build`
+     `echo "//npm.pkg.github.com/:_authToken=$NPM_TOKEN" >> .npmrc && npm ci && npx prisma generate && npm run build`
    - **Start Command:**  
-     `npm start`
+     `npx prisma migrate deploy && npm start`
 
 4. **Variables:**
+   - **NPM_TOKEN** → GitHub PAT with `read:packages` (secret).
    - **DATABASE_URL** → reference **core-db** `DATABASE_URL`.
    - **REDIS_URL** → reference **redis** `REDIS_URL` (or `REDIS_PRIVATE_URL` if available).
    - **REDIS_CHANNEL** → `realtime:events`.
    - **JWT_ACCESS_SECRET** → **same** as identity-service (and realtime-gateway).
    - **PORT** → optional.
 
-5. **Deploy.** Apply migrations for core DB (see §7).
+5. **Deploy.** Migrations run on start.
 
 ---
 
-## 6. Deploy realtime-gateway
+## 8. Deploy realtime-gateway
 
 1. **+ New** → **GitHub Repo** → select **realtime-gateway** repo.
 2. **Environment:** same as identity and core.
 3. **Settings:**
-   - **Name:** `realtime-gateway`.
+   - **Name:** `realtime-gateway` (or `realtime-gateway-dev` for dev env).
    - **Build Command:**  
-     `npm ci && npm run build`
+     `echo "//npm.pkg.github.com/:_authToken=$NPM_TOKEN" >> .npmrc && npm ci && npm run build`
    - **Start Command:**  
      `npm start`
 
 4. **Variables:**
+   - **NPM_TOKEN** → GitHub PAT with `read:packages` (secret).
    - **REDIS_URL** → reference **redis** `REDIS_URL`.
    - **REDIS_CHANNEL** → `realtime:events`.
-   - **JWT_ACCESS_SECRET** (or **JWT_SECRET**) → **same** as identity-service.
+   - **JWT_ACCESS_SECRET** → **same** as identity-service.
    - **PORT** → optional.
 
 5. **Deploy.**  
@@ -117,21 +144,19 @@ If you use one environment for “dev” first, add these three there; repeat fo
 
 ---
 
-## 7. Deploy relay (from core-service repo)
+## 9. Deploy relay (from core-service repo)
 
 The relay is a long-running process that polls core’s outbox and publishes to Redis. Two options:
 
 **Option A – Same repo, separate Railway service**
 
 1. **+ New** → **GitHub Repo** → select **core-service** again (same repo).
-2. **Name:** `relay`.
+2. **Name:** `relay` (or `relay-dev` for dev env).
 3. **Build Command:**  
-   `npm ci && npx prisma generate && npm run build`  
-   (Relay uses Prisma; no Nest build needed for relay only, but reusing build is fine.)
+   `echo "//npm.pkg.github.com/:_authToken=$NPM_TOKEN" >> .npmrc && npm ci && npx prisma generate && npm run build`
 4. **Start Command:**  
-   `node dist/relay/main.js`  
-   (If your relay is TypeScript-only, use `npx ts-node src/relay/main.ts` or add a `relay` script to package.json that runs the built relay.)
-5. **Variables:** same as core-service: **DATABASE_URL** (core-db), **REDIS_URL**, **REDIS_CHANNEL**.
+   `npx prisma migrate deploy && node dist/relay/main.js`
+5. **Variables:** **NPM_TOKEN**, **DATABASE_URL** (core-db), **REDIS_URL**, **REDIS_CHANNEL**.
 6. **Deploy.**
 
 **Option B – Single “core” service that runs API + relay**
@@ -143,27 +168,16 @@ After `npm run build`, Nest compiles `src/` including `src/relay/main.ts` → `d
 
 ---
 
-## 8. Run migrations (first time per environment)
+## 10. Run migrations (first time per environment)
 
-Railway does not run Prisma migrations automatically. Per environment:
+Migrations run automatically in the **Start Command** (`npx prisma migrate deploy && ...`). If you need to run them manually (e.g. before first deploy):
 
-**Identity DB**
-
-- From your machine (with `DATABASE_URL` set to Railway identity-db URL):  
-  `cd identity-service && npx prisma migrate deploy`  
-- Or add a one-off job / deploy hook that runs `prisma migrate deploy` (e.g. script or GitHub Action after deploy).
-
-**Core DB**
-
-- Same idea:  
-  `cd core-service && npx prisma migrate deploy`  
-  using core-db `DATABASE_URL`.
-
-Do this once per environment (development, staging, production) when you first add the DBs.
+- **Identity DB:** `cd identity-service && npx prisma migrate deploy` (with `DATABASE_URL` = Railway identity-db URL)
+- **Core DB:** `cd core-service && npx prisma migrate deploy` (with `DATABASE_URL` = Railway core-db URL)
 
 ---
 
-## 9. Wire branches to environments (optional)
+## 11. Wire branches to environments
 
 - **development** branch → deploy to **development** environment.  
 - **staging** branch → deploy to **staging** environment.  
@@ -175,7 +189,7 @@ If you use **one** Railway project with three environments, create three “sets
 
 ---
 
-## 10. GitHub Actions (optional)
+## 12. GitHub Actions (optional)
 
 You can keep **CI only** in GitHub (build + test) and let **Railway** do the deploy (via “Deploy on push” above). No change to Actions needed.
 
@@ -188,7 +202,7 @@ Your current identity-service workflow uses **Azure** deploy; you can remove tho
 
 ---
 
-## 11. Checklist per environment
+## 13. Checklist per environment
 
 | Step | identity-service | core-service | realtime-gateway | relay |
 |------|-------------------|---------------|-------------------|-------|
@@ -198,12 +212,13 @@ Your current identity-service workflow uses **Azure** deploy; you can remove tho
 | REDIS_URL | — | ✓ | ✓ | ✓ |
 | JWT_ACCESS_SECRET | ✓ | ✓ | ✓ | — |
 | BOOTSTRAP_* (identity only) | ✓ | — | — | — |
-| Run migrations (once) | identity | core | — | — |
+| NPM_TOKEN | ✓ | ✓ | ✓ | ✓ |
+| Run migrations (in Start) | identity | core | — | core |
 | Generate domain | ✓ | ✓ | ✓ | — |
 
 ---
 
-## 12. URLs for ayncor-e2e / clients
+## 14. URLs for ayncor-e2e / clients
 
 After deploy, note:
 

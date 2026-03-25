@@ -8,6 +8,8 @@ This document proposes **future backend services** Ayncor will likely need as th
 
 The goal is to keep **clear service boundaries**, preserve **contracts-first** development, and only introduce new services when they reduce complexity, risk, or cost.
 
+**Encryption & E2EE (full guide):** [e2ee.md](./e2ee.md) — TLS, at-rest, app-layer encryption, search impact, Slack vs WhatsApp, EKM, staged checklists.
+
 ---
 
 ## 0. Principles for Adding Services
@@ -304,6 +306,8 @@ The goal is to keep **clear service boundaries**, preserve **contracts-first** d
 
 **Status:** Not implemented. **Do not add speculative DB columns** until cost, retention, or operational triggers are clear. This section is a **blueprint** so the team can execute without a ground-up redesign.
 
+**Canonical detail:** [cold-storage.md](./cold-storage.md) (hot/cold definitions, triggers, worker flow, schema sketches, search interactions, where code changes happen).
+
 ### 6.1 What “cold storage” means here
 
 - **Hot**: recent message data in **PostgreSQL** (`core-service`) — normal latency for thread reads, inbox, reactions, versions.
@@ -386,9 +390,11 @@ Examples only; names and nullability would be finalized in a proper ADR + Prisma
 
 ## 7. Message Encryption Roadmap (Decision Area)
 
+**Canonical detail:** [e2ee.md](./e2ee.md) (threat models, search vs encryption, phased checklists, implementation notes).
+
 Today, message bodies are stored as plaintext in `core-service` Postgres (application-level). You have three meaningful directions:
 
-### Option 1 — “Standard SaaS” (recommended for now)
+### Option 1 — “Standard SaaS” (Slack-like baseline)
 
 - **TLS in transit** (HTTPS/WSS)
 - **DB at-rest encryption** via managed Postgres provider (disk encryption)
@@ -397,7 +403,7 @@ Today, message bodies are stored as plaintext in `core-service` Postgres (applic
 **Pros**: simplest, fastest iteration, compatible with search and compliance tools.  
 **Cons**: not end-to-end encrypted.
 
-### Option 2 — Application-layer encryption at rest (per org or per tenant key)
+### Option 2 — Application-layer encryption at rest (Slack-like enterprise posture)
 
 - Encrypt message bodies before storing, decrypt on read
 - Keys stored/managed in KMS; rotate keys; audit key usage
@@ -413,7 +419,17 @@ Today, message bodies are stored as plaintext in `core-service` Postgres (applic
 **Pros**: strongest privacy story.  
 **Cons**: product trade-offs (search, AI, compliance), significantly more engineering.
 
-**Recommendation**: Start with Option 1. Revisit after PMF and after you’ve built Search + Notifications (since E2EE strongly impacts both).
+### Slack-like recommendation for Ayncor
+
+If you want to be **Slack-like**, the target posture is:
+
+- **Default**: Option 1 (strong SaaS baseline) for everyone.
+- **Enterprise**: Option 2 (KMS-backed, per-org keys / customer-managed keys) to reduce blast radius of DB compromise/backups and to support security-conscious customers **without breaking Slack-style features** (search, notifications, admin/compliance workflows).
+- **Not default**: Option 3 (E2EE) unless you explicitly decide Ayncor’s product should accept the major feature trade-offs.
+
+**Recommendation**: Build Option 1 now. Plan Option 2 as an enterprise milestone (after durable jobs + attachments/search foundations). Keep Option 3 as a separate “mode” only if the product strategy demands it.
+
+**Do not implement app-layer encryption of message bodies until search architecture is chosen** — see [e2ee.md §6](./e2ee.md#6-search-and-app-layer-encryption-why-we-defer-option-2-until-later).
 
 ---
 

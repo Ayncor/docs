@@ -145,7 +145,7 @@ OPEN / BLOCKED / DECIDED → ARCHIVED   (terminal, irreversible)
 **Message flow:**
 1. `POST /messages` creates immutable Message + MessageVersion v1 in same transaction
 2. `POST /messages/:id/versions` creates MessageVersion v2, v3, etc. (edits are append-only)
-3. `GET /messages/thread/:threadId` returns messages with their latest version embedded
+3. `GET /messages/thread/:threadId?limit=&cursor=` returns a page of messages (newest first) with latest version embedded; `next_cursor` loads older messages
 
 **Inbox logic:**
 - Only `ThreadUserState.status = IN_INBOX` threads surface in inbox
@@ -456,7 +456,7 @@ identity-service
    ├── Treats it as a HINT only (not authoritative)
    └── Schedules debounced HTTP refresh:
        - inbox topic → GET /inbox
-       - thread topic → GET /messages/thread/:threadId
+       - thread topic → GET /messages/thread/:threadId (paginate with `cursor` / `next_cursor`)
 ```
 
 ---
@@ -487,7 +487,7 @@ identity-service
 | **Participants** | `POST/GET /threads/:threadId/participants`, `PATCH/DELETE /threads/:threadId/participants/:userId` |
 | **User State** | `GET/PATCH /threads/:threadId/user-state` |
 | **Inbox** | `GET /inbox` |
-| **Messages** | `POST /messages`, `GET /messages/thread/:threadId`, `POST/GET /messages/:messageId/versions` |
+| **Messages** | `POST /messages`, `GET /messages/thread/:threadId` (cursor pagination, newest first), `POST/GET /messages/:messageId/versions` |
 | **Reactions** | `POST /reactions`, `GET /reactions/message/:messageId` |
 
 ### realtime-gateway (`:3010`)
